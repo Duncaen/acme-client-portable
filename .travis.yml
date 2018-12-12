@@ -1,0 +1,14 @@
+language: c
+
+os:
+    - linux
+    - osx
+
+addons:
+    apt:
+        packages:
+            - libseccomp-dev
+
+compiler:
+    - clang
+    - gcc
