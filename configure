@@ -495,13 +495,13 @@ exec > Makefile.configure
 [ -z "${SBINDIR}"    ] && SBINDIR="${PREFIX}/sbin"
 [ -z "${INCLUDEDIR}" ] && INCLUDEDIR="${PREFIX}/include"
 [ -z "${LIBDIR}"     ] && LIBDIR="${PREFIX}/lib"
-[ -z "${MANDIR}"     ] && MANDIR="${PREFIX}/man"
 [ -z "${SHAREDIR}"   ] && SHAREDIR="${PREFIX}/share"
+[ -z "${MANDIR}"     ] && MANDIR="${SHAREDIR}/man"
 
-[ -z "${INSTALL_PROGRAM}" ] && INSTALL_PROGRAM="${INSTALL} -m 0555"
-[ -z "${INSTALL_LIB}"     ] && INSTALL_LIB="${INSTALL} -m 0444"
-[ -z "${INSTALL_MAN}"     ] && INSTALL_MAN="${INSTALL} -m 0444"
-[ -z "${INSTALL_DATA}"    ] && INSTALL_DATA="${INSTALL} -m 0444"
+[ -z "${INSTALL_PROGRAM}" ] && INSTALL_PROGRAM="${INSTALL} -m 0755"
+[ -z "${INSTALL_LIB}"     ] && INSTALL_LIB="${INSTALL} -m 0644"
+[ -z "${INSTALL_MAN}"     ] && INSTALL_MAN="${INSTALL} -m 0644"
+[ -z "${INSTALL_DATA}"    ] && INSTALL_DATA="${INSTALL} -m 0644"
 
 cat << __HEREDOC__
 CC		= ${CC}

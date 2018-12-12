@@ -47,7 +47,14 @@ clean:
 distclean: clean
 	rm -f config.h config.log Makefile.configure
 
-.PHONY: all clean distclean
+install:
+	mkdir -p ${DESTDIR}${MANDIR}/man1 ${DESTDIR}${MANDIR}/man5
+	mkdir -p ${DESTDIR}${BINDIR}
+	${INSTALL_PROGRAM} acme-client ${DESTDIR}${BINDIR}
+	${INSTALL_MAN} acme-client.1 ${DESTDIR}${MANDIR}/man1
+	${INSTALL_MAN} acme-client.conf.5 ${DESTDIR}${MANDIR}/man5
+
+.PHONY: all clean distclean install
 
 ${SRCS}: config.h
 
