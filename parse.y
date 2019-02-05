@@ -30,8 +30,6 @@
 #include <sys/types.h>
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
-#else
-# include "queue.h"
 #endif
 #include <sys/stat.h>
 #include <ctype.h>

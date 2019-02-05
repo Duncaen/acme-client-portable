@@ -19,8 +19,6 @@
 
 #if HAVE_SYS_QUEUE
 # include <sys/queue.h>
-#else
-# include "queue.h"
 #endif
 
 #define AUTH_MAXLEN	120	/* max length of an authority_c name */

@@ -256,18 +256,6 @@ main(void)
 	return(EFAULT == errno ? 0 : 1);
 }
 #endif /* TEST_SECCOMP_FILTER */
-#if TEST_SECCOMP_STRICT
-#include <sys/prctl.h>
-#include <linux/seccomp.h>
-#include <errno.h>
-
-int
-main(void)
-{
-	prctl(PR_SET_SECCOMP, SECCOMP_MODE_STRICT, 0);
-	return(EFAULT == errno ? 0 : 1);
-}
-#endif /* TEST_SECCOMP_STRICT */
 #if TEST_SOCK_NONBLOCK
 /*
  * Linux doesn't (always?) have this.
@@ -283,17 +271,6 @@ main(void)
 	return 0;
 }
 #endif /* TEST_SOCK_NONBLOCK */
-#if TEST_STRUCT_SOCKADDR_SA_LEN
-#include <sys/socket.h>
-
-int
-main(void)
-{
-	struct sockaddr addr;
-	(void) addr->sa_len;
-	return 0;
-}
-#endif /* TEST_STRUCT_SOCKADDR_SA_LEN */
 #if TEST_STRLCAT
 #include <string.h>
 
@@ -385,6 +362,28 @@ main(void)
 	return 0;
 }
 #endif /* TEST_STRTONUM */
+#if TEST_SYS_QUEUE
+#include <sys/queue.h>
+#include <stddef.h>
+
+struct foo {
+	int bar;
+	TAILQ_ENTRY(foo) entries;
+};
+
+TAILQ_HEAD(fooq, foo);
+
+int
+main(void)
+{
+	struct fooq foo_q, *foo, *next;
+
+	TAILQ_INIT(&foo_q);
+	TAILQ_FOREACH_SAFE(foo, &foo_q, entries, next) {
+	}
+	return 0;
+}
+#endif /* TEST_SYS_QUEUE */
 #if TEST_SYSTRACE
 #include <sys/param.h>
 #include <dev/systrace.h>
