@@ -1,4 +1,4 @@
-/*	$Id: http.c,v 1.22 2018/08/08 17:47:44 deraadt Exp $ */
+/*	$Id: http.c,v 1.25 2019/03/04 10:59:04 florian Exp $ */
 /*
  * Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
  *
@@ -139,10 +139,20 @@ http_init()
 		goto err;
 	}
 
+#if LIBRESSL_VERSION_NUMBER >= 0x2090100fL
+	if (tls_config_set_ca_file(tlscfg, tls_default_ca_cert_file()) == -1) {
+		warn("tls_config_set_ca_file: %s", tls_config_error(tlscfg));
+		goto err;
+	}
+#else
+#ifndef DEFAULT_CA_FILE
+#define DEFAULT_CA_FILE "/etc/ssl/cert.pem"
+#endif
 	if (tls_config_set_ca_file(tlscfg, DEFAULT_CA_FILE) == -1) {
 		warn("tls_config_set_ca_file: %s", tls_config_error(tlscfg));
 		goto err;
 	}
+#endif
 
 	return 0;
 
@@ -446,9 +456,8 @@ http_head_get(const char *v, struct httphead *h, size_t hsz)
 	size_t	 i;
 
 	for (i = 0; i < hsz; i++) {
-		if (strcmp(h[i].key, v))
-			continue;
-		return &h[i];
+		if (strcasecmp(h[i].key, v) == 0)
+			return &h[i];
 	}
 	return NULL;
 }

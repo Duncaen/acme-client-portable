@@ -17,6 +17,8 @@
 
 #include "config.h"
 
+#if HAVE_SECCOMP_FILTER
+
 #include <sys/syscall.h>
 #include <sys/ioctl.h>
 
@@ -354,3 +356,4 @@ sandbox_after(int arg)
 	}
 	return 0;
 }
+#endif /* HAVE_SECCOMP_FILTER */

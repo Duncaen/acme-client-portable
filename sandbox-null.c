@@ -14,9 +14,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+
+#include "config.h"
+
+#if !HAVE_SECCOMP_FILTER
 
 #include <errno.h>
 #include <stdarg.h>
@@ -41,3 +42,5 @@ sandbox_after(int arg)
 	(void)arg;
 	return(1);
 }
+
+#endif /* !HAVE_SECCOMP_FILTER */

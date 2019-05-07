@@ -22,7 +22,8 @@ SRCS=\
 	compats.c\
 
 SRCS+=\
-	sandbox-seccomp.c
+	sandbox-seccomp.c\
+	sandbox-null.c\
 
 OBJS=\
 	$(patsubst %.c,%.o,$(filter %.c,${SRCS}))\
