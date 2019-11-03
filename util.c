@@ -1,4 +1,4 @@
-/*	$Id: util.c,v 1.11 2018/03/15 18:26:47 otto Exp $ */
+/*	$Id: util.c,v 1.12 2019/06/28 13:32:46 deraadt Exp $ */
 /*
  * Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
  *
@@ -95,7 +95,7 @@ readop(int fd, enum comm comm)
 	long		 op;
 
 	ssz = read(fd, &op, sizeof(long));
-	if (ssz < 0) {
+	if (ssz == -1) {
 		warn("read: %s", comms[comm]);
 		return LONG_MAX;
 	} else if (ssz && ssz != sizeof(long)) {
@@ -128,7 +128,7 @@ readbuf(int fd, enum comm comm, size_t *sz)
 	size_t		 rsz, lsz;
 	char		*p = NULL;
 
-	if ((ssz = read(fd, sz, sizeof(size_t))) < 0) {
+	if ((ssz = read(fd, sz, sizeof(size_t))) == -1) {
 		warn("read: %s length", comms[comm]);
 		return NULL;
 	} else if ((size_t)ssz != sizeof(size_t)) {
@@ -147,7 +147,7 @@ readbuf(int fd, enum comm comm, size_t *sz)
 	rsz = 0;
 	lsz = *sz;
 	while (lsz) {
-		if ((ssz = read(fd, p + rsz, lsz)) < 0) {
+		if ((ssz = read(fd, p + rsz, lsz)) == -1) {
 			warn("read: %s", comms[comm]);
 			break;
 		} else if (ssz > 0) {
@@ -179,7 +179,7 @@ writeop(int fd, enum comm comm, long op)
 
 	sigfp = signal(SIGPIPE, sigpipe);
 
-	if ((ssz = write(fd, &op, sizeof(long))) < 0) {
+	if ((ssz = write(fd, &op, sizeof(long))) == -1) {
 		if ((er = errno) != EPIPE)
 			warn("write: %s", comms[comm]);
 		signal(SIGPIPE, sigfp);
@@ -216,7 +216,7 @@ writebuf(int fd, enum comm comm, const void *v, size_t sz)
 
 	sigfp = signal(SIGPIPE, sigpipe);
 
-	if ((ssz = write(fd, &sz, sizeof(size_t))) < 0) {
+	if ((ssz = write(fd, &sz, sizeof(size_t))) == -1) {
 		if ((er = errno) != EPIPE)
 			warn("write: %s length", comms[comm]);
 		signal(SIGPIPE, sigfp);
@@ -227,7 +227,7 @@ writebuf(int fd, enum comm comm, const void *v, size_t sz)
 
 	if ((size_t)ssz != sizeof(size_t))
 		warnx("short write: %s length", comms[comm]);
-	else if ((ssz = write(fd, v, sz)) < 0) {
+	else if ((ssz = write(fd, v, sz)) == -1) {
 		if (errno == EPIPE)
 			rc = 0;
 		else

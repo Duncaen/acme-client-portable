@@ -90,6 +90,12 @@ fileproc(int certsock, const char *certdir, const char *certfile, const char
 	long		 lval;
 	enum fileop	 op;
 
+#if HAVE_UNVEIL
+	if (unveil(certdir, "rwc") == -1) {
+		warn("unveil");
+		goto out;
+	}
+#else
 	if (chroot(certdir) == -1) {
 		warn("chroot");
 		goto out;
@@ -98,6 +104,7 @@ fileproc(int certsock, const char *certdir, const char *certfile, const char
 		warn("chdir");
 		goto out;
 	}
+#endif
 
 	/*
 	 * rpath and cpath for rename, wpath and cpath for

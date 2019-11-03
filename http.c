@@ -76,7 +76,7 @@ dosysread(char *buf, size_t sz, const struct http *http)
 	ssize_t	 rc;
 
 	rc = read(http->fd, buf, sz);
-	if (rc < 0)
+	if (rc == -1)
 		warn("%s: read", http->src.ip);
 	return rc;
 }
@@ -87,7 +87,7 @@ dosyswrite(const void *buf, size_t sz, const struct http *http)
 	ssize_t	 rc;
 
 	rc = write(http->fd, buf, sz);
-	if (rc < 0)
+	if (rc == -1)
 		warn("%s: write", http->src.ip);
 	return rc;
 }
@@ -101,7 +101,7 @@ dotlsread(char *buf, size_t sz, const struct http *http)
 		rc = tls_read(http->ctx, buf, sz);
 	} while (rc == TLS_WANT_POLLIN || rc == TLS_WANT_POLLOUT);
 
-	if (rc < 0)
+	if (rc == -1)
 		warnx("%s: tls_read: %s", http->src.ip,
 		    tls_error(http->ctx));
 	return rc;
@@ -116,7 +116,7 @@ dotlswrite(const void *buf, size_t sz, const struct http *http)
 		rc = tls_write(http->ctx, buf, sz);
 	} while (rc == TLS_WANT_POLLIN || rc == TLS_WANT_POLLOUT);
 
-	if (rc < 0)
+	if (rc == -1)
 		warnx("%s: tls_write: %s", http->src.ip,
 		    tls_error(http->ctx));
 	return rc;
@@ -347,26 +347,38 @@ err:
 }
 
 struct httpxfer *
-http_open(const struct http *http, const void *p, size_t psz)
+http_open(const struct http *http, int headreq, const void *p, size_t psz)
 {
 	char		*req;
 	int		 c;
 	struct httpxfer	*trans;
 
 	if (p == NULL) {
-		c = asprintf(&req,
-		    "GET %s HTTP/1.0\r\n"
-		    "Host: %s\r\n"
-		    "\r\n",
-		    http->path, http->host);
+		if (headreq)
+			c = asprintf(&req,
+			    "HEAD %s HTTP/1.0\r\n"
+			    "Host: %s\r\n"
+			    "User-Agent: OpenBSD-acme-client\r\n"
+			    "\r\n",
+			    http->path, http->host);
+		else
+			c = asprintf(&req,
+			    "GET %s HTTP/1.0\r\n"
+			    "Host: %s\r\n"
+			    "User-Agent: OpenBSD-acme-client\r\n"
+			    "\r\n",
+			    http->path, http->host);
 	} else {
 		c = asprintf(&req,
 		    "POST %s HTTP/1.0\r\n"
 		    "Host: %s\r\n"
 		    "Content-Length: %zu\r\n"
+		    "Content-Type: application/jose+json\r\n"
+		    "User-Agent: OpenBSD-acme-client\r\n"
 		    "\r\n",
 		    http->path, http->host, psz);
 	}
+
 	if (c == -1) {
 		warn("asprintf");
 		return NULL;
@@ -690,7 +702,7 @@ http_get_free(struct httpget *g)
 
 struct httpget *
 http_get(const struct source *addrs, size_t addrsz, const char *domain,
-    short port, const char *path, const void *post, size_t postsz)
+    short port, const char *path, int headreq, const void *post, size_t postsz)
 {
 	struct http	*h;
 	struct httpxfer	*x;
@@ -704,7 +716,7 @@ http_get(const struct source *addrs, size_t addrsz, const char *domain,
 	if (h == NULL)
 		return NULL;
 
-	if ((x = http_open(h, post, postsz)) == NULL) {
+	if ((x = http_open(h, headreq, post, postsz)) == NULL) {
 		http_free(h);
 		return NULL;
 	} else if ((headr = http_head_read(h, x, &headrsz)) == NULL) {

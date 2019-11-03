@@ -1,4 +1,4 @@
-/*	$Id: chngproc.c,v 1.13 2019/04/01 04:18:54 naddy Exp $ */
+/*	$Id: chngproc.c,v 1.15 2019/08/12 18:01:44 benno Exp $ */
 /*
  * Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
  *
@@ -40,6 +40,12 @@ chngproc(int netsock, const char *root)
 	enum chngop	  op;
 	void		 *pp;
 
+#if HAVE_UNVEIL
+	if (unveil(root, "wc") == -1) {
+		warn("unveil");
+		goto out;
+	}
+#else
 	if (chroot(root) == -1) {
 		warn("chroot");
 		goto out;
@@ -48,6 +54,7 @@ chngproc(int netsock, const char *root)
 		warn("chdir");
 		goto out;
 	}
+#endif
 #if HAVE_PLEDGE
 	if (pledge("stdio cpath wpath", NULL) == -1) {
 		warn("pledge");
@@ -91,6 +98,11 @@ chngproc(int netsock, const char *root)
 		else if ((tok = readstr(netsock, COMM_TOK)) == NULL)
 			goto out;
 
+		if (asprintf(&fmt, "%s.%s", tok, th) == -1) {
+			warn("asprintf");
+			goto out;
+		}
+
 		/* Vector appending... */
 
 		pp = reallocarray(fs, (fsz + 1), sizeof(char *));
@@ -99,21 +111,20 @@ chngproc(int netsock, const char *root)
 			goto out;
 		}
 		fs = pp;
-		fs[fsz] = tok;
-		tok = NULL;
-		fsz++;
-
-		if (asprintf(&fmt, "%s.%s", fs[fsz - 1], th) == -1) {
+		if (asprintf(&fs[fsz], "%s/%s", root, tok) == -1) {
 			warn("asprintf");
 			goto out;
 		}
+		fsz++;
+		free(tok);
+		tok = NULL;
 
 		/*
 		 * Create and write to our challenge file.
 		 * Note: we use file descriptors instead of FILE
 		 * because we want to minimise our pledges.
 		 */
-		fd = open(fs[fsz - 1], O_WRONLY|O_EXCL|O_CREAT, 0444);
+		fd = open(fs[fsz - 1], O_WRONLY|O_CREAT|O_TRUNC, 0444);
 		if (fd == -1) {
 			warn("%s", fs[fsz - 1]);
 			goto out;
@@ -132,7 +143,7 @@ chngproc(int netsock, const char *root)
 		free(fmt);
 		th = fmt = NULL;
 
-		dodbg("%s/%s: created", root, fs[fsz - 1]);
+		dodbg("%s: created", fs[fsz - 1]);
 
 		/*
 		 * Write our acknowledgement.

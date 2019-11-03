@@ -17,7 +17,7 @@ SRCS=\
 	netproc.c\
 	parse.y\
 	revokeproc.c\
-	rsa.c\
+	key.c\
 	util.c\
 	compats.c\
 

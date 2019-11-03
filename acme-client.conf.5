@@ -1,4 +1,4 @@
-.\"	$OpenBSD: acme-client.conf.5,v 1.16 2018/08/03 17:48:34 benno Exp $
+.\"	$OpenBSD: acme-client.conf.5,v 1.21 2019/07/04 05:06:06 solene Exp $
 .\"
 .\" Copyright (c) 2005 Esben Norby <norby@openbsd.org>
 .\" Copyright (c) 2004 Claudio Jeker <claudio@openbsd.org>
@@ -17,7 +17,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: August 3 2018 $
+.Dd $Mdocdate: July 4 2019 $
 .Dt ACME-CLIENT.CONF 5
 .Os
 .Sh NAME
@@ -63,9 +63,10 @@ Macros are not expanded inside quotes.
 .Pp
 For example:
 .Bd -literal -offset indent
-le="letsencrypt"
-domain example.com {
-	sign with $le
+api_url="https://acme-v02.api.letsencrypt.org/directory"
+authority letsencrypt {
+	api url $api_url
+	account key "/etc/acme/letsencrypt-privkey.pem"
 }
 .Ed
 .Sh AUTHORITIES
@@ -82,23 +83,22 @@ is a string used to reference this certificate authority.
 .Pp
 It is followed by a block of options enclosed in curly brackets:
 .Bl -tag -width Ds
-.It Ic account key Ar file
+.It Ic account key Ar file Op Ar keytype
 Specify a
 .Ar file
 used to identify the user of this certificate authority.
+.Ar keytype
+can be
+.Cm rsa
+or
+.Cm ecdsa .
+It defaults to
+.Cm rsa .
 .It Ic api url Ar url
 Specify the
 .Ar url
 under which the ACME API is reachable.
 .El
-.Pp
-An example authority block:
-.Bd -literal -offset indent
-authority letsencrypt {
-	api url "https://acme-v01.api.letsencrypt.org/directory"
-	account key "/etc/ssl/private/my-acme.key"
-}
-.Ed
 .Sh DOMAINS
 The certificates to be obtained through ACME.
 .Bl -tag -width Ds
@@ -116,8 +116,15 @@ Specify a list of alternative names for which the certificate will be valid.
 The common name is included automatically if this option is present,
 but there is no automatic conversion/inclusion between "www." and
 plain domain name forms.
-.It Ic domain key Ar file
+.It Ic domain key Ar file Op Ar keytype
 The private key file for which the certificate will be obtained.
+.Ar keytype
+can be
+.Cm rsa
+or
+.Cm ecdsa .
+It defaults to
+.Cm rsa .
 .It Ic domain certificate Ar file
 The filename of the certificate that will be issued.
 This is optional if
@@ -155,37 +162,6 @@ If it is not specified, a default of
 .Pa /var/www/acme
 will be used.
 .El
-.Pp
-An example domain declaration looks like this:
-.Bd -literal -offset indent
-domain www.example.com {
-	alternative names { example.com secure.example.com }
-	domain key "/etc/ssl/private/www.example.com.key"
-	domain certificate "/etc/ssl/www.example.com.crt"
-	domain full chain certificate "/etc/ssl/www.example.com.fullchain.pem"
-	sign with letsencrypt
-	challengedir "/var/www/acme"
-}
-.Ed
-.Pp
-An
-.Xr httpd.conf 5
-server declaration to use that certificate looks like this:
-.Bd -literal -offset indent
-server "www.example.com" {
-        alias "example.com"
-        alias "secure.example.com"
-        listen on $ext_addr port 80
-        listen on $ext_addr tls port 443
-        tls certificate "/etc/ssl/www.example.com.fullchain.pem"
-        tls key "/etc/ssl/private/www.example.com.key"
-        location "/.well-known/acme-challenge/*" {
-                root "/acme"
-                request strip 2
-        }
-        root "/htdocs"
-}
-.Ed
 .Sh FILES
 .Bl -tag -width "/etc/acme-client.conf" -compact
 .It Pa /etc/acme-client.conf
