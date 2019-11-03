@@ -46,6 +46,7 @@ chngproc(int netsock, const char *root)
 		goto out;
 	}
 #else
+#if 0
 	if (chroot(root) == -1) {
 		warn("chroot");
 		goto out;
@@ -54,6 +55,7 @@ chngproc(int netsock, const char *root)
 		warn("chdir");
 		goto out;
 	}
+#endif
 #endif
 #if HAVE_PLEDGE
 	if (pledge("stdio cpath wpath", NULL) == -1) {

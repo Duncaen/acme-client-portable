@@ -96,6 +96,7 @@ fileproc(int certsock, const char *certdir, const char *certfile, const char
 		goto out;
 	}
 #else
+#if 0
 	if (chroot(certdir) == -1) {
 		warn("chroot");
 		goto out;
@@ -104,6 +105,7 @@ fileproc(int certsock, const char *certdir, const char *certfile, const char
 		warn("chdir");
 		goto out;
 	}
+#endif
 #endif
 
 	/*
