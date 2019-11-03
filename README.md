@@ -11,19 +11,36 @@ NAME
      acme-client  ACME client
 
 SYNOPSIS
-     acme-client [-ADFnrv] [-f configfile] domain
+     acme-client [-Fnrv] [-f configfile] domain
 
 DESCRIPTION
-     The acme-client utility is an Automatic Certificate Management
-     Environment (ACME) client.
+     acme-client is an Automatic Certificate Management Environment (ACME)
+     client: it looks in its configuration for a domain section corresponding
+     to the domain given as command line argument and uses that configuration
+     to retrieve an X.509 certificate which can be used to provide domain name
+     validation (i.e. prove that the domain is who it says it is).  The
+     certificates are typically used to provide HTTPS for web servers, but can
+     be used in any situation where domain name validation is required (such
+     as mail servers).
+
+     If the certificate already exists and is less than 30 days from expiry,
+     acme-client attempts to renew the certificate.
+
+     In order to prove that the client has access to the domain, a challenge
+     is issued by the signing authority.  acme-client implements the http-01
+     challenge type, where a file is created within a directory accessible by
+     a locally run web server.  The default challenge directory /var/www/acme
+     can be served by httpd(8) with this location block, which will properly
+     map response challenges:
+
+           location "/.well-known/acme-challenge/*" {
+                   root "/acme"
+                   request strip 2
+           }
 
      The options are as follows:
 
-     -A      Create a new RSA account key if one does not already exist.
-
-     -D      Create a new RSA domain key if one does not already exist.
-
-     -F      Force updating the certificate signature even if it's too soon.
+     -F      Force certificate renewal, even if it's too soon.
 
      -f configfile
              Specify an alternative configuration file.
@@ -37,55 +54,36 @@ DESCRIPTION
 
      domain  The domain name.
 
-     acme-client looks in its configuration for a domain section corresponding
-     to the domain given as command line argument.  It then uses that
-     configuration to retrieve an X.509 certificate.  If the certificate
-     already exists and is less than 30 days from expiry, acme-client will
-     attempt to refresh the signature.  Before a certificate can be requested,
-     an account key needs to be created using the -A argument.  The first time
-     a certificate is requested, the RSA key needs to be created with -D.
-
-     Challenges are used to verify that the submitter has access to the
-     registered domains.  acme-client only implements the http-01 challenge
-     type, where a file is created within a directory accessible by a locally-
-     run web server.  The default challenge directory /var/www/acme can be
-     served by httpd(8) with this location block, which will properly map
-     response challenges:
-
-           location "/.well-known/acme-challenge/*" {
-                   root "/acme"
-                   request strip 2
-           }
-
 FILES
+     /etc/acme              Private keys for acme-client.
      /etc/acme-client.conf  Default configuration.
      /var/www/acme          Default challengedir.
 
 EXIT STATUS
-     acme-client returns 1 on failure, 2 if the certificates didn't change (up
-     to date), or 0 if certificates were changed (revoked or updated).
+     acme-client returns 0 if certificates were changed (revoked or updated),
+     1 on failure, or 2 if the certificates didn't change (up to date).
 
 EXAMPLES
-     To initialize a new account and Domain key:
+     Example configuration files for acme-client and httpd(8) are provided in
+     /etc/examples/acme-client.conf and /etc/examples/httpd.conf.
 
-           # acme-client -vAD example.com
+     To generate a certificate for example.com and use it to provide HTTPS,
+     create acme-client.conf and httpd.conf and run:
 
-     To create and submit a new key for a single domain, assuming that the web
-     server has already been configured to map the challenge directory as
-     above:
+           # acme-client -v example.com && rcctl reload httpd
 
-           # acme-client -vD example.com
+     A cron(8) job can renew the certificate as necessary.  On renewal,
+     httpd(8) is reloaded:
 
-     A daily cron(8) job can renew the certificate:
-
-           acme-client example.com && rcctl reload httpd
+           0       *       *       *       *       sleep $((RANDOM \% 2048)) && \
+                   acme-client example.com && rcctl reload httpd
 
 SEE ALSO
      openssl(1), acme-client.conf(5), httpd.conf(5)
 
 STANDARDS
-     Automatic Certificate Management Environment (ACME),
-     https://tools.ietf.org/html/draft-ietf-acme-acme-03.
+     R. Barnes, J. Hoffman-Andrews, D. McCarney, and J. Kasten, Automatic
+     Certificate Management Environment (ACME), RFC 8555, March 2019.
 
 HISTORY
      The acme-client utility first appeared in OpenBSD 6.1.
@@ -94,14 +92,7 @@ AUTHORS
      The acme-client utility was written by Kristaps Dzonsons
      <kristaps@bsd.lv>.
 
-BUGS
-     The challenge and certificate processes currently retain their (root)
-     privileges.
-
-     For the time being, acme-client only supports RSA as an account key
-     format.
-
-Void Linux                      August 2, 2018                      Void Linux
+Void Linux                       June 15, 2019                      Void Linux
 ```
 
 # acme-client.conf(5)
@@ -147,9 +138,10 @@ MACROS
 
      For example:
 
-           le="letsencrypt"
-           domain example.com {
-                   sign with $le
+           api_url="https://acme-v02.api.letsencrypt.org/directory"
+           authority letsencrypt {
+                   api url $api_url
+                   account key "/etc/acme/letsencrypt-privkey.pem"
            }
 
 AUTHORITIES
@@ -164,19 +156,12 @@ AUTHORITIES
 
      It is followed by a block of options enclosed in curly brackets:
 
-     account key file
+     account key file [keytype]
              Specify a file used to identify the user of this certificate
-             authority.
+             authority.  keytype can be rsa or ecdsa.  It defaults to rsa.
 
      api url url
              Specify the url under which the ACME API is reachable.
-
-     An example authority block:
-
-           authority letsencrypt {
-                   api url "https://acme-v01.api.letsencrypt.org/directory"
-                   account key "/etc/ssl/private/my-acme.key"
-           }
 
 DOMAINS
      The certificates to be obtained through ACME.
@@ -194,8 +179,9 @@ DOMAINS
              option is present, but there is no automatic conversion/inclusion
              between "www." and plain domain name forms.
 
-     domain key file
+     domain key file [keytype]
              The private key file for which the certificate will be obtained.
+             keytype can be rsa or ecdsa.  It defaults to rsa.
 
      domain certificate file
              The filename of the certificate that will be issued.  This is
@@ -226,34 +212,6 @@ DOMAINS
              The directory in which the challenge file will be stored.  If it
              is not specified, a default of /var/www/acme will be used.
 
-     An example domain declaration looks like this:
-
-           domain www.example.com {
-                   alternative names { example.com secure.example.com }
-                   domain key "/etc/ssl/private/www.example.com.key"
-                   domain certificate "/etc/ssl/www.example.com.crt"
-                   domain full chain certificate "/etc/ssl/www.example.com.fullchain.pem"
-                   sign with letsencrypt
-                   challengedir "/var/www/acme"
-           }
-
-     An httpd.conf(5) server declaration to use that certificate looks like
-     this:
-
-           server "www.example.com" {
-                   alias "example.com"
-                   alias "secure.example.com"
-                   listen on $ext_addr port 80
-                   listen on $ext_addr tls port 443
-                   tls certificate "/etc/ssl/www.example.com.fullchain.pem"
-                   tls key "/etc/ssl/private/www.example.com.key"
-                   location "/.well-known/acme-challenge/*" {
-                           root "/acme"
-                           request strip 2
-                   }
-                   root "/htdocs"
-           }
-
 FILES
      /etc/acme-client.conf  acme-client(1) configuration file
 
@@ -263,5 +221,5 @@ SEE ALSO
 HISTORY
      The acme-client.conf file format first appeared in OpenBSD 6.1.
 
-Void Linux                      August 3, 2018                      Void Linux
+Void Linux                       July 4, 2019                       Void Linux
 ```
